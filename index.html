@@ -6,10 +6,10 @@
 <title>聊天气泡</title>
 <style>
   body { font-family: Arial; margin:0; padding:10px; background:#f2f2f2; }
-  #messages { height: 400px; overflow-y:auto; padding:5px; }
+  #messages { height: 400px; overflow-y:auto; padding:5px; display:flex; flex-direction:column; }
   .bubble { display:inline-block; padding:8px 12px; margin:5px; border-radius:15px; max-width:70%; word-wrap:break-word; }
-  .me { background:#4caf50; color:white; margin-left:auto; text-align:right; }
-  .other { background:#e0e0e0; color:black; margin-right:auto; text-align:left; }
+  .me { background:#4caf50; color:white; align-self:flex-end; text-align:right; }
+  .other { background:#e0e0e0; color:black; align-self:flex-start; text-align:left; }
   #composer { display:flex; gap:5px; margin-top:5px; }
   #composer input { flex:1; padding:5px; }
   #composer button { padding:5px 10px; }
@@ -34,9 +34,9 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+import { getDatabase, ref, push, onChildAdded, query, limitToLast } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
-// ======= Firebase 配置 =======
+// ===== Firebase 配置 =====
 const firebaseConfig = {
   apiKey: "AIzaSyCZ2eU1njlspI-WUHrjCD-Ggebyo9ucjOE",
   authDomain: "my-chat-2cce8.firebaseapp.com",
@@ -48,11 +48,9 @@ const firebaseConfig = {
   measurementId: "G-X0LDBTTNKN"
 };
 
-// 初始化 Firebase
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// ======= DOM 元素 =======
 const loginDiv = document.getElementById("login");
 const chatDiv = document.getElementById("chat");
 const nameInput = document.getElementById("nameInput");
@@ -62,32 +60,32 @@ const messagesDiv = document.getElementById("messages");
 const msgInput = document.getElementById("msgInput");
 const sendBtn = document.getElementById("sendBtn");
 
-// ======= 用户信息 =======
-let userName = "";
+// ===== 用户信息 =====
+let userName = localStorage.getItem("chatName") || "";
 let senderId = localStorage.getItem("chatId");
 if(!senderId){
   senderId = Math.random().toString(36).substr(2,9);
   localStorage.setItem("chatId", senderId);
 }
 
-// ======= 登录 =======
-loginBtn.onclick = () => {
-  const name = nameInput.value.trim();
-  if(!name) return alert("请输入名字");
+// ===== 登录 =====
+const doLogin = (name)=>{
   userName = name;
-  localStorage.setItem("chatName", userName);
+  localStorage.setItem("chatName", name);
   loginDiv.style.display = "none";
   chatDiv.style.display = "block";
 };
 
-const savedName = localStorage.getItem("chatName");
-if(savedName){
-  userName = savedName;
-  loginDiv.style.display = "none";
-  chatDiv.style.display = "block";
-}
+loginBtn.onclick = ()=>{
+  const name = nameInput.value.trim();
+  if(!name) return alert("请输入名字");
+  doLogin(name);
+};
 
-// ======= 发送消息 =======
+// 自动登录
+if(userName) doLogin(userName);
+
+// ===== 发送消息 =====
 sendBtn.onclick = () => {
   const text = msgInput.value.trim();
   if(!text) return;
@@ -99,14 +97,15 @@ msgInput.addEventListener("keydown", (e)=>{
   if(e.key === "Enter") sendBtn.onclick();
 });
 
-// ======= 接收消息 =======
-onChildAdded(ref(db, "chat"), (data)=>{
+// ===== 接收消息 =====
+const messagesQuery = query(ref(db, "chat"), limitToLast(100)); // 最多显示100条
+onChildAdded(messagesQuery, (data)=>{
   const msg = data.val();
   const div = document.createElement("div");
   div.className = "bubble " + (msg.senderId === senderId ? "me" : "other");
   div.textContent = msg.senderId === senderId ? msg.text : `${msg.name}: ${msg.text}`;
   messagesDiv.appendChild(div);
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  messagesDiv.scrollTop = messagesDiv.scrollHeight; // 自动滚动到底部
 });
 </script>
 
