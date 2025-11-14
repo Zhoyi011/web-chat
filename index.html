@@ -18,6 +18,7 @@ body { font-family: Arial; margin:0; padding:0; background:#f2f2f2; }
 #composer { display:flex; gap:5px; padding:5px; }
 #composer input { flex:1; padding:5px; }
 #composer button { padding:5px 10px; }
+#controls { display:flex; gap:5px; margin-bottom:5px; }
 @media(min-width:768px){
   #chatContainer { flex-direction:row; }
   #roomList { width:200px; }
@@ -41,7 +42,10 @@ body { font-family: Arial; margin:0; padding:0; background:#f2f2f2; }
     <button id="newRoomBtn">创建房间</button>
   </div>
   <div id="chatArea">
-    <button id="changeNameBtn">修改名字</button>
+    <div id="controls">
+      <button id="changeNameBtn">修改名字</button>
+      <span id="currentRoomLabel">未选择房间</span>
+    </div>
     <div id="messages"></div>
     <div id="composer">
       <input id="msgInput" placeholder="输入消息…">
@@ -82,6 +86,7 @@ const newRoomBtn = document.getElementById("newRoomBtn");
 const messagesDiv = document.getElementById("messages");
 const msgInput = document.getElementById("msgInput");
 const sendBtn = document.getElementById("sendBtn");
+const currentRoomLabel = document.getElementById("currentRoomLabel");
 
 // ===== 用户信息 =====
 let userName = localStorage.getItem("chatName") || "";
@@ -93,8 +98,8 @@ if(!senderId){
 
 let currentRoom = null;
 
-// ===== 登录 =====
-const doLogin = (name)=>{
+// ===== 登录/修改名字 =====
+function doLogin(name){
   userName = name;
   localStorage.setItem("chatName", name);
   senderId = Math.random().toString(36).substr(2,9);
@@ -103,16 +108,17 @@ const doLogin = (name)=>{
   loginDiv.style.display = "none";
   chatContainer.style.display = "flex";
   loadRooms();
-};
+}
 
 loginBtn.onclick = ()=>{
   const name = nameInput.value.trim();
   if(!name) return alert("请输入名字");
   doLogin(name);
 };
+
 if(userName) doLogin(userName);
 
-// 修改名字
+// 点击修改名字
 changeNameBtn.onclick = ()=>{
   loginDiv.style.display = "block";
   chatContainer.style.display = "none";
@@ -145,18 +151,19 @@ newRoomBtn.onclick = ()=>{
 // ===== 选择房间 =====
 function selectRoom(roomId){
   currentRoom = roomId;
+  currentRoomLabel.textContent = "当前房间: " + roomId;
   messagesDiv.innerHTML="";
   const roomRef = query(ref(db,"chatRooms/"+roomId),limitToLast(100));
   onChildAdded(roomRef,(data)=>{
     const msg = data.val();
-    if(msg.text === "undefined") return;
+    if(!msg.text) return;
     const div = document.createElement("div");
     div.className = "bubble " + (msg.senderId===senderId?"me":"other");
     div.textContent = `${msg.name}: ${msg.text}`;
     messagesDiv.appendChild(div);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
-    // 桌面通知（仅自己不是发送者时）
+    // 桌面通知
     if(msg.senderId!==senderId && Notification.permission==="granted"){
       new Notification(`${msg.name} (${roomId})`,{body:msg.text});
     }
@@ -171,6 +178,7 @@ sendBtn.onclick = ()=>{
   push(ref(db,"chatRooms/"+currentRoom),{text,name:userName,senderId});
   msgInput.value="";
 };
+
 msgInput.addEventListener("keydown",(e)=>{
   if(e.key==="Enter") sendBtn.onclick();
 });
