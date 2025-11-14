@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>实时聊天室</title>
+  <style>
+    body { font-family: Arial; margin:0; padding:10px; background:#f2f2f2; }
+    #messages { height: 300px; overflow-y: auto; border:1px solid #ccc; padding:5px; background:#fff; }
+    #composer { margin-top:5px; display:flex; gap:5px; }
+    #composer input { flex:1; padding:5px; }
+    #composer button { padding:5px 10px; }
+  </style>
+</head>
+<body>
+
+<h2>实时聊天室</h2>
+<div id="messages"></div>
+
+<div id="composer">
+  <input id="msgInput" placeholder="输入消息…">
+  <button id="sendBtn">发送</button>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+  import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+
+  // 你的 Firebase 配置
+  const firebaseConfig = {
+    apiKey: "AIzaSyCZ2eU1njlspI-WUHrjCD-Ggebyo9ucjOE",
+    authDomain: "my-chat-2cce8.firebaseapp.com",
+    databaseURL: "https://my-chat-2cce8-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "my-chat-2cce8",
+    storageBucket: "my-chat-2cce8.firebasestorage.app",
+    messagingSenderId: "265119250636",
+    appId: "1:265119250636:web:46423841795a7e9aa5ea69",
+    measurementId: "G-X0LDBTTNKN"
+  };
+
+  // 初始化 Firebase
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  const messagesDiv = document.getElementById("messages");
+  const msgInput = document.getElementById("msgInput");
+  const sendBtn = document.getElementById("sendBtn");
+
+  // 发送消息
+  sendBtn.onclick = () => {
+    const text = msgInput.value.trim();
+    if(text){
+      push(ref(db, "chat"), { text });
+      msgInput.value = "";
+    }
+  }
+
+  msgInput.addEventListener("keydown", (e)=>{
+    if(e.key === "Enter") sendBtn.onclick();
+  });
+
+  // 监听新消息
+  onChildAdded(ref(db, "chat"), (data) => {
+    const msg = data.val().text;
+    const div = document.createElement("div");
+    div.textContent = msg;
+    messagesDiv.appendChild(div);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  });
+</script>
+
+</body>
+</html>
